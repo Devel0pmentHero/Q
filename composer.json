@@ -1,0 +1,32 @@
+{
+    "name": "devel0pmenthero/q",
+    "description": "Expressive database access library for MySQL-, PostgreSQL- and Microsoft SQL servers.",
+    "type": "library",
+    "keywords": [
+        "database",
+        "orm",
+        "sql",
+        "dbal"
+    ],
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "": "src/",
+            "Q\\": "src/Q"
+        }
+    },
+    "authors": [
+        {
+            "name": "Kerry",
+            "email": "Q@DevelopmentHero.de"
+        }
+    ],
+    "require": {
+        "php": ">=8.0"
+    },
+    "suggest": {
+        "ext-mysqli": "Required for MySQL database connections",
+        "ext-pgsql": "Required for PostgreSQL database connections",
+        "ext-sqlsrv": "Required for Microsoft SQL server database connections"
+    }
+}
