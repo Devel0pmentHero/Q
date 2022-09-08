@@ -1,10 +1,13 @@
 # Q
 
+Q is a ... no, you may expect now some buzzwords like "small" and "lightweight", but no
+
 ## Installation
 
 Q is hosted on packagist. Simply call
 ``composer require devel0pmenthero/q``
 in a console or add ````
+
 
 ## Usage
 
@@ -13,7 +16,11 @@ Q::Connect(\Q\MySQL\Provider::class, "localhost", 3306, $User, $Password, $Datab
  ->Execute("SELECT ID, Name, Price, Description FROM Shop.Products WHERE Stock <= 20");
 ```
 
-Connecting to a database using a default Provider via global config.
+### Connecting to a database using a default Provider via global config
+The Q facade checks upon load if there's a global "QConfig" constant array defined and if so
+uses its values to automatically connect to a "default" database.
+If you're only using a single database connection in your project, you can define the credentials in your app config
+and simply call the Q facade from wherever you need it.
 
 ```PHP
 const QConfig = [
@@ -30,6 +37,31 @@ Q::Select("ID", "Name", "Price", "Description")
  ->From("Shop.Products")
  ->Where(["Stock" => ["<=" => 20]]);
 ```
+
+
+### Working with multiple connections
+
+The static Q facade acts as a proxy to the last connected "data provider"
+The ``Q::Connect()``-method returns
+
+The ``Q::Connect()``-method is basically just a virtual constructor that additionally 
+propagates some provider specific values, so a direct call to the several implementations is possible too.
+```PHP
+$MySQL = new Q\MySQL\Provider("localhost", 3306, $User, $Password, ...);
+$MySQL->Select("*")
+ ->From("Shop.Products")
+ ->Where(["Stock" => ["<=" => 20]]);
+$PgSQL = new Q\PgSQL\Provider(...);
+```
+
+## Expressions
+
+"Expressions" are the main feature of Q - these are fluent interfaces that transform PHP-Code
+into injection safe SQL while retaining its syntax as much as possible.
+
+There's no syntactic or logic validation, you have to care on your own to call the methods in the correct order;
+this library will only transfer a fluid object interface into plain SQL strings.
+
 
 ### Select
 
@@ -635,3 +667,47 @@ DROP INDEX "Prices" ON "Shop"."Products"
 
 </p>
 </details>
+
+### Drop
+
+Dropping databases, schemas and tables can be done by using the ``Q::Drop()``-method which returns a specialized
+implementation of the ``\Q\Expression\IDrop``-Expression according the current database.
+
+#### Database
+
+```PHP
+Q::Drop()
+ ->Database("HardwareStore");
+```
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+EXECUTE sp_rename 'HardwareStore', 'HardwareShop'
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+DROP DATABASE HardwareStore
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+DROP DATABASE "HardwareStore"
+```
+
+</p>
+</details>
+
+#### Schema
+
+#### Table
