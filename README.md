@@ -710,4 +710,72 @@ DROP DATABASE "HardwareStore"
 
 #### Schema
 
+
+```PHP
+Q::Drop()
+ ->Schema("HardwareStore");
+```
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+DROP DATABASE Shop
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+DROP SCHEMA Shop
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+DROP SCHEMA "Shop"
+```
+
+</p>
+</details>
+
 #### Table
+
+
+```PHP
+Q::Drop()
+ ->Table("Shop.Products");
+```
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+DROP TABLE Shop.Products
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+DROP TABLE Shop.Products
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+DROP TABLE "Shop.Products"
+```
+
+</p>
+</details>
