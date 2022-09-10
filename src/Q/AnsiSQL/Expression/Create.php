@@ -33,7 +33,7 @@ trait Create {
 
     /** @inheritDoc */
     public function Schema(string $Name): static {
-        $this->Statement .= "SCHEMA {$this->Provider->EscapeField($Name)}";
+        $this->Statement .= "SCHEMA {$this->Provider->SanitizeField($Name)}";
         return $this;
     }
 

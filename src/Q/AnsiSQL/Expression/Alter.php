@@ -53,10 +53,10 @@ trait Alter {
     /** @inheritDoc */
     public function Drop(array $Columns, array $Indexes = []): static {
         foreach($Columns as $Column) {
-            $this->Statements[] = "DROP COLUMN {$this->Provider->SanitizeField($Column)}";
+            $this->Statements[] = "DROP COLUMN {$this->Provider->EscapeField($Column)}";
         }
         foreach($Indexes as $Index) {
-            $this->Statements[] = "DROP " . ($Index === "Primary" ? "PRIMARY KEY" : "INDEX {$this->Provider->SanitizeField($Index)}");
+            $this->Statements[] = "DROP " . ($Index === "Primary" ? "PRIMARY KEY" : "INDEX {$this->Provider->EscapeField($Index)}");
         }
         return $this;
     }
