@@ -33,13 +33,13 @@ trait Drop {
 
     /** @inheritDoc */
     public function Schema(string $Name): static {
-        $this->Statement .= "SCHEMA {$this->Provider->EscapeField($Name)}";
+        $this->Statement .= "SCHEMA {$this->Provider->SanitizeField($Name)}";
         return $this;
     }
 
     /** @inheritDoc */
     public function Table(string $Name): static {
-        $this->Statement .= "TABLE {$this->Provider->EscapeField($Name)}";
+        $this->Statement .= "TABLE {$this->Provider->SanitizeField($Name)}";
         return $this;
     }
 

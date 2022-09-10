@@ -774,7 +774,7 @@ DROP TABLE Shop.Products
 <p>
 
 ```SQL
-DROP TABLE "Shop.Products"
+DROP TABLE "Shop"."Products"
 ```
 
 </p>
