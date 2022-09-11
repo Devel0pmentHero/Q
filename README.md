@@ -2,7 +2,18 @@
 
 Q is a ... no, you may expect now some buzzwords like "small" and "lightweight", but no
 
-so: Q is a mixup between a DBAL and a Querybuilder
+so: Q is a mixup between a "Database access Layer" and a Querybuilder that focuses on
+human readable SQL statements.
+
+```PHP
+<article class="Blog">
+
+</article>
+require "/vendor/autoload.php";
+
+Q::Connect(\Q\MySQL\Provider::class, "localhost", 3306, $User, $Password, $Database, false);
+Q::Execute("SELECT ID, Name, Price, Description FROM Shop.Products WHERE Stock <= 20");
+```
 
 ## Installation
 
@@ -13,7 +24,8 @@ in a console or add ``"devel0pmenthero/q": ^1.0.0`` to your composer.json.
 
 ## Usage
 
-Q is built around a static facade that handles connection 
+Q is built around a static facade for target RDBMS specific ``Q\IProvider``-instances 
+which contain methods for querying and escaping as well as factories for query builders and aggregate functions. 
 The static Q facade acts as a proxy to the last connected "data provider"
 
 ```PHP
@@ -122,13 +134,33 @@ Q::Execute("SELECT * FROM ". Q::SanitizeField("Shop.Orders") ." WHERE " . Q::Esc
 
 The PgSQL-Provider will quote every identifier by default due to PostgreSQL's folding to lowercase.
 
+## Prepared statements
+Prepared statements are created through the ``Q::Prepare()``-method which returns a specialized
+implementation of the ``\Q\IPreparedStatement``-interface according the current database.
+
+````PHP
+$Statement = Q::Prepare("INSERT INTO Products (ID, Name, Price) VALUES (NULL, ?, ?)");
+
+// Bulk import.
+foreach($Products as $Product) {
+    $Statement->Apply((string)$Product["Name"], (float)$Product["Price"])
+    $Result = $Statement->Execute();
+    if($Result->Status){
+        $ID = Q::LastInsertID();
+    }
+}
+````
+
+## Transactions
+Although stubs exist, transactions are currently under development.
+
 ## Expressions
 
 "Expressions" are the main feature of Q - these are fluent interfaces that transform PHP-Code
 into injection safe SQL while retaining its syntax as much as possible.
 
-Expressions are early evaluated and have no form of syntactic or logic validation, you have to care on your own to call the methods in the correct order;
-this library will only transfer a fluent object interface into plain SQL strings.
+Expressions are early evaluated and have no form of syntactic or logic validation, you have to care on your own to call their methods in the correct order;
+this library will only transfer an object-oriented API into plain SQL strings.
 
 ```PHP
 $Result = Q::Select("ID", "Name", "Price")
@@ -152,7 +184,7 @@ Iterating over an Expression will immediately execute it and return its result s
 
 ```PHP
 foreach(
-    Q::Select("*")
+    Q::Select("ID", "Name", "Price")
      ->From("Shop.Products")
      ->Where(["Stock" => ["<=" => 20]])
     as
@@ -170,7 +202,7 @@ echo Q::Select("*")->From("Shop.Products");
 
 ### Select
 
-Selecting database records can be done by using the ``Q::Select()``-method which returns a specialized
+Selecting database records is done through the ``Q::Select()``-method which returns a specialized
 implementation of the ``\Q\Expression\ISelect``-Expression according the current database.
 
 ```PHP
@@ -348,6 +380,81 @@ WHERE (
 </p>
 </details>
 
+#### Ordering records
+To order records, the ``\Q\Expression\ISelect``-Expressions provides the ``IExpression::OrderBy()``-method which accepts a map of ordering conditions.
+The key of the map represents the column while the value must be a boolean flag whether to sort in ascending(true) or descending(false) order
+```PHP
+Q::Select("*")
+ ->From("Shop.Products")
+ ->OrderBy([
+    "Price" => true,
+    "Stock" => false
+]);
+```
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+SELECT * FROM Shop.Products ORDER BY Price ASC, Stock DESC
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+SELECT * FROM Shop.Products ORDER BY Price ASC, Stock DESC
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+SELECT * FROM "Shop"."Products" ORDER BY "Price" ASC, "Stock" DESC
+```
+
+</p>
+</details>
+
+#### Limiting records
+To limit records, the ``\Q\Expression\ISelect``-Expressions provides the ``IExpression::Limit()`` and ``IExpression::Offset()``-methods.
+```PHP
+Q::Select("*")
+ ->From("Shop.Products")
+ ->Limit(10)
+ ->Offset(20);
+```
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+SELECT * FROM Shop.Products LIMIT 10 OFFSET 20 
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+SELECT * FROM Shop.Products LIMIT 10 OFFSET 20 
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+SELECT * FROM "Shop"."Products" LIMIT 10 OFFSET 20 
+```
+
+</p>
+</details>
+
 #### Joins
 
 To join the records of a different table into the result set, the ``\Q\Expression\ISelect``-Expression provides the
@@ -401,7 +508,7 @@ WHERE "Orders"."Paid" = 1
 
 ### Insert
 
-Creating new database records can be done by using the ``Q::Insert()``-method which returns a specialized
+Creating new database records is done through the ``Q::Insert()``-method which returns a specialized
 implementation of the ``\Q\Expression\IInsert``-Expression according the current database.
 
 If the first field name ends with the characters "ID" and its value is null, 
@@ -459,7 +566,7 @@ $ID = (int)Q::Insert()
 
 ### Update
 
-Updating database records can be done by using the ``Q::Update()``-method which returns a specialized
+Updating database records is done through the ``Q::Update()``-method which returns a specialized
 implementation of the ``\Q\Expression\IUpdate``-Expression according the current database.
 
 ```PHP
@@ -498,7 +605,7 @@ UPDATE "Shop"."Products"  SET "Stock" = 10, "Ordered" = 1 WHERE "ID" = 29
 
 ### Delete
 
-Deleting database records can be done by using the ``Q::Delete()``-method which returns a specialized 
+Deleting database records is done through the ``Q::Delete()``-method which returns a specialized 
 implementation of the ``\Q\Expression\IDelete``-Expression according the current database.
 
 ```PHP
@@ -537,7 +644,7 @@ DELETE FROM "Shop"."Orders" WHERE ("Canceled" = 1 OR "Delivered" = 1)
 
 ### Create
 
-Creating new databases, schemas and tables can be done by using the ``Q::Create()``-method which returns a specialized 
+Creating new databases, schemas and tables is done through the ``Q::Create()``-method which returns a specialized 
 implementation of the ``\Q\Expression\ICreate``-Expression according the current database.
 
 #### Database
@@ -546,6 +653,9 @@ implementation of the ``\Q\Expression\ICreate``-Expression according the current
 Q::Create()
  ->Database("Vendor");
 ```
+
+Note: This method won't have any effect while using the MySQL-Provider to stay compatible to schema based databases.
+Databases can be created through the ``ICreate::Schema()``-method, this applies to the ``IAlter::Database()`` and ``IDrop::Database()``-methods too. 
 
 <details><summary>MsSQL</summary>
 <p>
@@ -711,7 +821,7 @@ CREATE INDEX "SpecialOffer" ON "Shop"."Products" ("Price", "Stock")
 
 ### Alter
 
-Altering databases, schemas and tables can be done by using the ``Q::Alter()``-method which returns a specialized
+Altering databases, schemas and tables is done through the ``Q::Alter()``-method which returns a specialized
 implementation of the ``\Q\Expression\IAlter``-Expression according the current database.
 
 #### Database
@@ -845,7 +955,7 @@ DROP INDEX "Prices" ON "Shop"."Products"
 
 ### Drop
 
-Dropping databases, schemas and tables can be done by using the ``Q::Drop()``-method which returns a specialized
+Dropping databases, schemas and tables is done through the ``Q::Drop()``-method which returns a specialized
 implementation of the ``\Q\Expression\IDrop``-Expression according the current database.
 
 #### Database
