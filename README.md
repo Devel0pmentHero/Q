@@ -44,15 +44,83 @@ Q::Select("ID", "Name", "Price", "Description")
 The static Q facade acts as a proxy to the last connected "data provider"
 The ``Q::Connect()``-method returns
 
-The ``Q::Connect()``-method is basically just a virtual constructor that additionally 
-propagates some provider specific values, so a direct call to the several implementations is possible too.
+The ``Q::Connect()``-method is basically just a virtual constructor which additionally 
+propagates some provider specific values through static properties, so a direct call to the several implementations is possible too.
 ```PHP
 $MySQL = new Q\MySQL\Provider("localhost", 3306, $User, $Password, ...);
 $MySQL->Select("*")
- ->From("Shop.Products")
- ->Where(["Stock" => ["<=" => 20]]);
+      ->From("Shop.Products")
+      ->Where(["Stock" => ["<=" => 20]]);
 $PgSQL = new Q\PgSQL\Provider(...);
 ```
+
+### SQL
+Plain SQL strings can be executed on the server by passing the string through the ``Q::Execute()``-method.
+
+````PHP
+
+Q::Execute("SELECT ID, Name, Price FROM Shop.Products");
+
+
+````
+
+### Result sets
+Every operation performed on the database, will end in the return of a specialized ``IResult``-instance 
+which implements the ``\Traversable``-interface, thus removing the need of annoying while loops with "fetch_whatever()"-calls.
+
+Directly iterating over a result set will yield the values returned by the ``IResult::ToMap()``-method.
+````PHP
+foreach(Q::Execute("SELECT ID, Name, Price FROM Shop.Products") as $Product) {
+    print $Product["ID"], $Product["Name"];
+};
+````
+Mainly result sets provide 3 methods 
+
+Invoking a result set is an alias of calling its ``ToValue()``-method which will return the first value of the result set.
+````PHP
+$ID = Q::Execute("SELECT ID FROM Shop.Products WHERE Price = 19.99")();
+$Name = Q::Execute("SELECT Name FROM Shop.Products WHERE ID = $ID")->ToValue();
+````
+
+#### Streaming
+By default, Q uses buffered result sets; to use result set streaming, most of Q's executing methods accept an optional boolean flag.
+These apply to the ``Q::Execute($Statement, Buffered: false)`` and ``Q::Call($Procedure, Buffered: false)``-methods,
+while Expressions require an additional step by manually calling their ``IExpression::Execute(Buffered: false)``-method.
+
+Rewinding unbuffered result sets will throw a ``\RuntimeException()``.
+
+### Escaping
+
+#### Values
+
+Values can be escaped via passing them to the ``Q::Escape()``-method, 
+which is (except for the MsSQL-Provider) just an alias for the ``\mysqli::real_escape_string()`` and ``\pg_escape_string()``-methods.
+
+To convert a value into a database compatible representation, 
+the ``Q::Sanitize()``-method accepts any type of value and transforms it to an escaped string representation, 
+while using ``\json_encode()`` for arrays and objects.
+
+The Q library provides a simple ``Q\IModel``-interface which requires only the implementation of an ``ID()``-method, 
+that enables existing models being used as references.
+````PHP
+$Product = new \Models\Product(ID: $ID);
+Q::Execute("SELECT * FROM Shop.Orders WHERE ProductID = " . Q::Sanitize($Product));
+
+//Expressions wrap sanitation.
+Q::Select("*")->From("Shop.Orders")->Where(["ProductID" => $Product])
+````
+
+#### Fields
+
+Database-, schema-, table- and column-names can be escaped via passing them to the ``Q::EscapeField()``-method, 
+which will check the name against a list of RDBMS specific keywords and quote it in case of its occurrence.
+The ``Q::SanitizeField()``-method escapes an entire sequence of fields separated by the dot notation.
+
+````PHP
+Q::Execute("SELECT * FROM ". Q::SanitizeField("Shop.Orders") ." WHERE " . Q::EscapeField("ProductID") . " = " . Q::Sanitize($Product));
+````
+
+The PgSQL-Provider will quote every identifier by default due to PostgreSQL's folding to lowercase.
 
 ## Expressions
 
@@ -155,33 +223,43 @@ WHERE "Stock" <= 20
 #### Filtering records
 
 To filter records, the ``\Q\Expression\ISelect``-, ``IUpdate`` and ``IDelete``-Expressions provide the ``IExpression::Where()``-method which accepts a map of filtering conditions.
+The values of a set of filtering conditions will be chained with "AND"-statements, while every set of filtering conditions will be chained together with "OR"-statements.
 ```PHP
 Q::Select("*")
  ->From("Shop.Products")
- ->Where([
-     "ID"           => ["IN" => [1, 2, 3]],
-     "Name"         => [\Like => "%invoice%"],
-     "Category"     => [Where::In => ["SSD", "HDD", ""]],
-     "Stock"        => ["BETWEEN" => [50, 100]],
-     "Description"  => ["LIKE" => "%invoice%"],
-     "CreationTime" => ["<" => Q::CurrentTimestamp()]
- ])
+ ->Where(
+     [
+         "ID"       => ["IN" => [1, 2, 3]],
+         "Name"     => [\Like => "%Memory%"],
+         "Category" => [Where::In => ["SSD", "HDD", "RAM"]],
+     ],
+     [
+         "Stock"        => ["BETWEEN" => [50, 100]],
+         "Description"  => ["LIKE" => "%high performance%"],
+         "CreationTime" => ["<" => $MsSQL->CurrentTimestamp()]
+     ]
+ );
 ```
 
 <details><summary>MySQL</summary>
 <p>
 
 ```SQL
-SELECT * 
+SELECT *
 FROM Shop.Products 
 WHERE (
-    ID IN (1,2,3) 
-    AND Name LIKE '%invoice%' 
-    AND Category IN ('SSD','HDD','') 
-    AND (Stock BETWEEN 50 AND 100) 
-    AND Description LIKE '%invoice%' 
-    AND CreationTime < CURRENT_TIMESTAMP()
-)
+        (
+            ID IN (1,2,3) 
+            AND Name LIKE '%Memory%' 
+            AND Category IN ('SSD','HDD','RAM')
+        ) 
+    OR 
+        (
+            (Stock BETWEEN 50 AND 100) 
+            AND Description LIKE '%high performance%' 
+            AND CreationTime < CURRENT_TIMESTAMP()
+        )
+) 
 ```
 
 </p>
@@ -191,15 +269,20 @@ WHERE (
 
 ```SQL
 SELECT * 
-FROM Shop.Products 
+FROM Shop.Products
 WHERE (
-    ID IN (1,2,3)
-    AND Name LIKE '%invoice%'
-    AND Category IN ('SSD','HDD','') 
-    AND (Stock BETWEEN 50 AND 100) 
-    AND Description LIKE '%invoice%' 
-    AND CreationTime < CURRENT_TIMESTAMP
-)
+        (
+            ID IN (1,2,3) 
+            AND Name LIKE '%Memory%' 
+            AND Category IN ('SSD','HDD','RAM')
+        ) 
+    OR 
+        (
+            (Stock BETWEEN 50 AND 100) 
+            AND Description LIKE '%high performance%' 
+            AND CreationTime < CURRENT_TIMESTAMP
+        )
+) 
 ```
 
 </p>
@@ -208,16 +291,21 @@ WHERE (
 <p>
 
 ```SQL
-SELECT *
-FROM "Shop"."Products"
+SELECT * 
+FROM "Shop"."Products" 
 WHERE (
-    "ID" IN (1, 2, 3)
-    AND "Name" LIKE '%invoice%'
-    AND "Category" IN ('SSD', 'HDD', '')
-    AND ("Stock" BETWEEN 50 AND 100)
-    AND "Description" LIKE '%invoice%'
-    AND "CreationTime" < CURRENT_TIMESTAMP()
-)
+        (
+            "ID" IN (1,2,3) 
+            AND "Name" LIKE '%Memory%' 
+            AND "Category" IN ('SSD','HDD','RAM')
+        ) 
+    OR 
+        (
+            ("Stock" BETWEEN 50 AND 100) 
+            AND "Description" LIKE '%high performance%' 
+            AND "CreationTime" < CURRENT_TIMESTAMP()
+        )
+) 
 ```
 
 </p>
@@ -405,14 +493,14 @@ implementation of the ``\Q\Expression\ICreate``-Expression according the current
 
 ```PHP
 Q::Create()
- ->Database("HardwareStore");
+ ->Database("Vendor");
 ```
 
 <details><summary>MsSQL</summary>
 <p>
 
 ```SQL
-CREATE DATABASE HardwareStore COLLATE Latin1_General_100_CI_AI_SC_UTF8
+CREATE DATABASE Vendor COLLATE Latin1_General_100_CI_AI_SC_UTF8
 ```
 
 </p>
@@ -421,7 +509,7 @@ CREATE DATABASE HardwareStore COLLATE Latin1_General_100_CI_AI_SC_UTF8
 <p>
 
 ```SQL
-CREATE DATABASE "HardwareStore" WITH ENCODING 'UTF8'
+CREATE DATABASE "Vendor" WITH ENCODING 'UTF8'
 ```
 
 </p>
@@ -534,6 +622,42 @@ CREATE TABLE "Shop"."Products" (
 </p>
 </details>
 
+#### Index
+
+```PHP
+Q::Create()
+ ->Index("SpecialOffer")
+ ->On("Shop.Products", ["Price", "Stock"]);
+```
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+CREATE INDEX SpecialOffer ON Shop.Products (Price, Stock)
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+CREATE INDEX SpecialOffer ON Shop.Products (Price, Stock)
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+CREATE INDEX "SpecialOffer" ON "Shop"."Products" ("Price", "Stock")
+```
+
+</p>
+</details>
+
 ### Alter
 
 Altering databases, schemas and tables can be done by using the ``Q::Alter()``-method which returns a specialized
@@ -543,7 +667,7 @@ implementation of the ``\Q\Expression\IAlter``-Expression according the current 
 
 ```PHP
 Q::Alter()
- ->Database("HardwareStore")
+ ->Database("Vendor")
  ->Rename("HardwareShop");
 ```
 
@@ -551,7 +675,7 @@ Q::Alter()
 <p>
 
 ```SQL
-EXECUTE sp_rename 'HardwareStore', 'HardwareShop'
+EXECUTE sp_rename 'Vendor', 'HardwareShop'
 ```
 
 </p>
@@ -560,7 +684,7 @@ EXECUTE sp_rename 'HardwareStore', 'HardwareShop'
 <p>
 
 ```SQL
-ALTER DATABASE "HardwareStore" RENAME TO "HardwareShop"
+ALTER DATABASE "Vendor" RENAME TO "HardwareShop"
 ```
 
 </p>
@@ -676,24 +800,14 @@ implementation of the ``\Q\Expression\IDrop``-Expression according the current d
 #### Database
 
 ```PHP
-Q::Drop()
- ->Database("HardwareStore");
+Q::Drop()->Database("Vendor");
 ```
 
-<details><summary>MySQL</summary>
-<p>
-
-```SQL
-EXECUTE sp_rename 'HardwareStore', 'HardwareShop'
-```
-
-</p>
-</details>
 <details><summary>MsSQL</summary>
 <p>
 
 ```SQL
-DROP DATABASE HardwareStore
+DROP DATABASE Vendor
 ```
 
 </p>
@@ -702,7 +816,7 @@ DROP DATABASE HardwareStore
 <p>
 
 ```SQL
-DROP DATABASE "HardwareStore"
+DROP DATABASE "Vendor"
 ```
 
 </p>
@@ -712,8 +826,7 @@ DROP DATABASE "HardwareStore"
 
 
 ```PHP
-Q::Drop()
- ->Schema("HardwareStore");
+Q::Drop()->Schema("Shop");
 ```
 
 <details><summary>MySQL</summary>
@@ -748,8 +861,7 @@ DROP SCHEMA "Shop"
 
 
 ```PHP
-Q::Drop()
- ->Table("Shop.Products");
+Q::Drop()->Table("Shop.Products");
 ```
 
 <details><summary>MySQL</summary>
@@ -775,6 +887,40 @@ DROP TABLE Shop.Products
 
 ```SQL
 DROP TABLE "Shop"."Products"
+```
+
+</p>
+</details>
+
+#### Index
+
+```PHP
+Q::Drop()->Index("SpecialOffer")->On("Shop.Products");
+```
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+DROP INDEX SpecialOffer ON Shop.Products
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+DROP INDEX SpecialOffer ON Shop.Products
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+DROP INDEX "SpecialOffer" ON "Shop"."Products"
 ```
 
 </p>
