@@ -171,7 +171,7 @@ trait Select {
             if(\is_string($Order)) {
                 $Conditions[] = $this->Provider->SanitizeField($Order);
             } else {
-                $Conditions[] = $this->Provider->SanitizeField($Field) . " " . ((bool)$Order ? "ASC " : "DESC ");
+                $Conditions[] = $this->Provider->SanitizeField($Field) . " " . ((bool)$Order ? "ASC" : "DESC");
             }
         }
         $this->Statement .= "ORDER BY " . \implode(", ", $Conditions);
