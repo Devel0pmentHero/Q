@@ -49,7 +49,7 @@ trait Create {
             $this->Statement .= "PRIMARY KEY ";
             return $this;
         }
-        $this->Statement .= ($Unique ? " UNIQUE" : "") . " INDEX {$this->Provider->EscapeField($Name)}";
+        $this->Statement .= ($Unique ? "UNIQUE" : "") . "INDEX {$this->Provider->EscapeField($Name)}";
         return $this;
     }
 
