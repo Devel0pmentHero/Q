@@ -1,18 +1,19 @@
 # Q
 
-Q is a ... no, you may expect now some buzzwords like "small" and "lightweight", but no
-
+Q is a ... no, you may expect now some buzzwords like "small" and "lightweight", 
+but no abstracting away SQL within PHP is not a trivial task, especially when it comes to tables;
 so: Q is a mixup between a "Database access Layer" and a Querybuilder that focuses on
 human readable SQL statements.
 
 ```PHP
-<article class="Blog">
-
-</article>
-require "/vendor/autoload.php";
-
-Q::Connect(\Q\MySQL\Provider::class, "localhost", 3306, $User, $Password, $Database, false);
-Q::Execute("SELECT ID, Name, Price, Description FROM Shop.Products WHERE Stock <= 20");
+<main class="Blog">
+<?php foreach(Q::Select("*")->From("Blog")->Limit(10)->Offset($Page * 10)->OrderBy("Date")) as $Post :>
+    <article class="Post">
+        <h2><?= $Post["Title"] ><h2>
+        <p><?= $Post["Content"] ></p>
+    </article>
+<?php endforeach; >
+</main>
 ```
 
 ## Installation
@@ -244,6 +245,17 @@ WHERE "Stock" <= 20
 
 </p>
 </details>
+
+#### Distinct
+
+
+Distinct selects are performed by passing the fields to select to a following call to the ``ISelect::Distinct()``-method.
+
+```PHP
+Q::Select()->Distinct("Name", "Category")
+ ->From("Shop.Products")
+ ->Where(["Price" => [">" => 19.99]]);
+```
 
 #### Aliases
 
@@ -506,6 +518,92 @@ WHERE "Orders"."Paid" = 1
 </p>
 </details>
 
+#### Sub selects
+Sub selects can be used in the ``ISelect::From()`` and ``ISelect::Exists()``-methods via passing another select Expression.
+
+Sub selects in the "FROM"-clause require an alias as a second argument in the field list of the top select.
+```PHP
+Q::Select(Q::Count("Products.ID"))
+ ->From(
+     Q::Select("*")
+      ->From("Orders")
+      ->Where(["Delivered" => true]),
+      "Products"
+);
+```
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+SELECT COUNT(Products.ID) FROM (SELECT * FROM Orders WHERE Delivered = 1) AS Products 
+```
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+SELECT COUNT(Products.ID) FROM (SELECT * FROM Orders WHERE Delivered = 1) AS Products 
+```
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+SELECT COUNT("Products"."ID") FROM (SELECT * FROM "Orders" WHERE "Delivered" = 1) AS "Products" 
+```
+</p>
+</details>
+
+
+The "EXISTS"-clause is currently implemented in a separate method and requires a preceding call to the ``ISelect::Where()``-method
+without passing any parameters to it. (This maybe changed to a filtering condition in the future)
+
+```PHP
+Q::Select("Customer")
+ ->From("Orders")
+ ->Where()
+ ->Exists(
+     Q::Select("Name")
+      ->From("Products")
+      ->Where(["Orders.ProductID" => "Products.ID"])
+ );
+```
+Note: The ``ISelect::Where()``-method is only aware of the names and aliases of its own instance, 
+this means a sub select doesn't know when to treat the value of a filtering condition as a reference to a foreign table field.
+References to foreign columns have to be always defined as the key of filtering conditions, otherwise they'll be just treated as simple strings.
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+SELECT Customer FROM Orders WHERE EXISTS (SELECT Name FROM Products WHERE Orders.ProductID = Products.ID)
+```
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+SELECT Customer FROM Orders WHERE EXISTS (SELECT Name FROM Products WHERE Orders.ProductID = Products.ID)
+```
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+SELECT "Customer" FROM "Orders" WHERE EXISTS (SELECT "Name" FROM "Products" WHERE "Orders"."ProductID" = "Products"."ID")
+```
+</p>
+</details>
+
+#### Union selects
+
+
+
+
 ### Insert
 
 Creating new database records is done through the ``Q::Insert()``-method which returns a specialized
@@ -531,7 +629,6 @@ Q::Insert()
 ```SQL
 INSERT INTO Shop.Products (ID, Name, Price, Category) VALUES (NULL, '8GB DDR5 Ram', 60.99, 'RAM')
 ```
-
 </p>
 </details>
 <details><summary>MsSQL</summary>
@@ -540,7 +637,6 @@ INSERT INTO Shop.Products (ID, Name, Price, Category) VALUES (NULL, '8GB DDR5 Ra
 ```SQL
 INSERT INTO Shop.Products (Name, Price, Category) VALUES ('8GB DDR5 Ram', 60.99, 'RAM')
 ```
-
 </p>
 </details>
 <details><summary>PgSQL</summary>
@@ -549,7 +645,6 @@ INSERT INTO Shop.Products (Name, Price, Category) VALUES ('8GB DDR5 Ram', 60.99,
 ```SQL
 INSERT INTO "Shop"."Products" ("ID", "Name", "Price", "Category") VALUES (DEFAULT, '8GB DDR5 Ram', 60.99, 'RAM')
 ```
-
 </p>
 </details>
 
@@ -1093,8 +1188,10 @@ This project is based on the database access layer of another hobby project of m
 if you're interested in further information, you can check out the documentation on https://vdesk.cloud/Documentation/Category/Server/Topic/Database 
 
 Features will be downstreamed from the original project; however, the following features/changes are currently planned:
-- Support for DB2.
-- Support for Oracle DBs.
-- Support for Firebird DBs(maybe).
-- Further separation of Create, Alter and Drop-Expressions.
+- Support for DB2, Oracle and Firebird(maybe) DBs.
+- Further separation of Create, Alter and Drop-Expressions into separate classes.
 - Support for transactions.
+- Insert Expressions may return the last autogenerated value by default upon invocation.
+- More verbose methods for table Expressions like ``AddColumn()``.
+- Support for creating, altering and dropping views.
+- Lazy Expressions which evaluate upon execution time.
