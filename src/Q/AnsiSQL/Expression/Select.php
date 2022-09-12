@@ -42,7 +42,7 @@ trait Select {
             if(\is_array($Field)) {
                 //Check if an IAggregateFunction has been passed.
                 if(isset($Field[0]) && $Field[0] instanceof IAggregateFunction) {
-                    $FlattenedFields[] = (string)$Field[0] . "{$Field[0]} AS {$this->Provider->EscapeField($Field[1])}";
+                    $FlattenedFields[] = "{$Field[0]} AS {$this->Provider->EscapeField($Field[1])}";
                     continue;
                 }
                 $FlattenedFields[] = $this->Provider->SanitizeField(\key($Field)) . " AS {$this->Provider->EscapeField(\current($Field))}";
