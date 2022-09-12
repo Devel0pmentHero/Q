@@ -7,7 +7,7 @@ human readable SQL statements.
 
 ```PHP
 <main class="Blog">
-<?php foreach(Q::Select("*")->From("Blog")->Limit(10)->Offset($Page * 10)->OrderBy("Date")) as $Post :>
+<?php foreach(Q::Select("*")->From("Blog")->Limit(10)->Offset($Page * 10)->OrderBy("Date") as $Post) :>
     <article class="Post">
         <h2><?= $Post["Title"] ><h2>
         <p><?= $Post["Content"] ></p>
@@ -25,7 +25,7 @@ in a console or add ``"devel0pmenthero/q": ^1.0.0`` to your composer.json.
 
 ## Usage
 
-Q is built around a static facade for target RDBMS specific ``Q\IProvider``-instances 
+Q is built around a static facade for target RDBMS specific ``\Q\IProvider``-instances 
 which contain methods for querying and escaping as well as factories for query builders and aggregate functions. 
 The static Q facade acts as a proxy to the last connected "data provider"
 
@@ -79,7 +79,7 @@ Q::Execute("SELECT ID, Name, Price FROM Shop.Products");
 ````
 
 ### Result sets
-Every operation performed on the database, will end in the return of a specialized ``IResult``-instance 
+Every operation performed on the database, will end in the return of a specialized ``\Q\IResult``-instance 
 which implements the ``\Traversable``-interface, thus removing the need of annoying while loops with "fetch_whatever()"-calls.
 
 Directly iterating over a result set will yield the values returned by the ``IResult::ToMap()``-method for each row in the result set.
@@ -113,7 +113,7 @@ To convert a value into a database compatible representation,
 the ``Q::Sanitize()``-method accepts any type of value and transforms it to an escaped string representation, 
 while using ``\json_encode()`` for arrays and objects.
 
-The Q library provides a simple ``Q\IModel``-interface which requires only the implementation of an ``ID()``-method, 
+The Q library provides a simple ``\Q\IModel``-interface which requires only the implementation of an ``ID()``-method, 
 that enables existing models being used as references.
 ````PHP
 $Product = new \Models\Product(ID: $ID);
@@ -295,6 +295,51 @@ WHERE Stock <= 20
 ```SQL
 SELECT "Price", "Category" AS "Topic", "Stock" AS "Count"
 FROM "Shop"."Products"
+WHERE "Stock" <= 20 
+```
+
+</p>
+</details>
+
+#### Aggregate functions
+
+Aggregate functions can be applied through the 
+``Q::Avg()``, ``Q:Min()``, ``Q:Max()``, ``Q:Sum()``, ``Q:Count()``, ``Q:Now()``, ``Q:Group()`` and ``Q:CurrentTimestamp()``-methods.
+
+```PHP
+Q::Select(Q::Avg("Price"), [Q::Count("Stock"), "Amount"])
+ ->From("Shop.Products")
+ ->Where(["Stock" => ["<=" => 20]]);
+```
+
+<details><summary>MySQL</summary>
+<p>
+
+```SQL
+SELECT AVG(Price), COUNT(Stock) AS Amount 
+FROM Shop.Products 
+WHERE Stock <= 20 
+```
+
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+SELECT AVG(Price), COUNT(Stock) AS Amount 
+FROM Shop.Products 
+WHERE Stock <= 20 
+```
+
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+SELECT AVG("Price"), COUNT("Stock") AS "Amount"
+FROM "Shop"."Products" 
 WHERE "Stock" <= 20 
 ```
 
@@ -535,7 +580,12 @@ Q::Select(Q::Count("Products.ID"))
 <p>
 
 ```SQL
-SELECT COUNT(Products.ID) FROM (SELECT * FROM Orders WHERE Delivered = 1) AS Products 
+SELECT COUNT(Products.ID) 
+FROM (
+    SELECT * 
+    FROM Orders 
+    WHERE Delivered = 1
+) AS Products 
 ```
 </p>
 </details>
@@ -543,7 +593,12 @@ SELECT COUNT(Products.ID) FROM (SELECT * FROM Orders WHERE Delivered = 1) AS Pro
 <p>
 
 ```SQL
-SELECT COUNT(Products.ID) FROM (SELECT * FROM Orders WHERE Delivered = 1) AS Products 
+SELECT COUNT(Products.ID) 
+FROM (
+    SELECT * 
+    FROM Orders 
+    WHERE Delivered = 1
+) AS Products 
 ```
 </p>
 </details>
@@ -551,7 +606,12 @@ SELECT COUNT(Products.ID) FROM (SELECT * FROM Orders WHERE Delivered = 1) AS Pro
 <p>
 
 ```SQL
-SELECT COUNT("Products"."ID") FROM (SELECT * FROM "Orders" WHERE "Delivered" = 1) AS "Products" 
+SELECT COUNT("Products"."ID") 
+FROM (
+    SELECT * 
+    FROM "Orders" 
+    WHERE "Delivered" = 1
+) AS "Products" 
 ```
 </p>
 </details>
@@ -578,7 +638,13 @@ References to foreign columns have to be always defined as the key of filtering 
 <p>
 
 ```SQL
-SELECT Customer FROM Orders WHERE EXISTS (SELECT Name FROM Products WHERE Orders.ProductID = Products.ID)
+SELECT Customer 
+FROM Orders 
+WHERE EXISTS (
+    SELECT Name 
+    FROM Products 
+    WHERE Orders.ProductID = Products.ID
+)
 ```
 </p>
 </details>
@@ -586,7 +652,13 @@ SELECT Customer FROM Orders WHERE EXISTS (SELECT Name FROM Products WHERE Orders
 <p>
 
 ```SQL
-SELECT Customer FROM Orders WHERE EXISTS (SELECT Name FROM Products WHERE Orders.ProductID = Products.ID)
+SELECT Customer 
+FROM Orders 
+WHERE EXISTS (
+    SELECT Name 
+    FROM Products 
+    WHERE Orders.ProductID = Products.ID
+)
 ```
 </p>
 </details>
@@ -594,15 +666,68 @@ SELECT Customer FROM Orders WHERE EXISTS (SELECT Name FROM Products WHERE Orders
 <p>
 
 ```SQL
-SELECT "Customer" FROM "Orders" WHERE EXISTS (SELECT "Name" FROM "Products" WHERE "Orders"."ProductID" = "Products"."ID")
+SELECT "Customer" 
+FROM "Orders" 
+WHERE EXISTS (
+    SELECT "Name" 
+    FROM "Products" 
+    WHERE "Orders"."ProductID" = "Products"."ID"
+)
 ```
 </p>
 </details>
 
 #### Union selects
 
+To combine result sets, the ``ISelect::Union()`` accepts an additional select Expression to use; 
+followed by an optional boolean flag determining whether to use an "UNION ALL" statement instead.
 
+```PHP
+Q::Select("ID", "CustomerName")
+ ->From("Orders")
+ ->Union(
+     Q::Select("ID", "ProductName")
+      ->From("Products")
+      ->Where(["Orders.ProductID" => "Products.ID"]),
+      All: false
+ );
+```
+<details><summary>MySQL</summary>
+<p>
 
+```SQL
+SELECT ID, CustomerName 
+FROM Orders 
+UNION SELECT ID, ProductName 
+FROM Products 
+WHERE Orders.ProductID = Products.ID 
+```
+</p>
+</details>
+<details><summary>MsSQL</summary>
+<p>
+
+```SQL
+SELECT ID, CustomerName 
+FROM Orders 
+UNION SELECT ID, ProductName 
+FROM Products 
+WHERE Orders.ProductID = Products.ID 
+```
+</p>
+</details>
+<details><summary>PgSQL</summary>
+<p>
+
+```SQL
+SELECT "ID", "CustomerName" 
+FROM "Orders" 
+UNION SELECT "ID", "ProductName" 
+FROM "Products" 
+WHERE "Orders"."ProductID" = "Products"."ID" 
+```
+</p>
+</details>
 
 ### Insert
 
@@ -697,6 +822,23 @@ UPDATE "Shop"."Products"  SET "Stock" = 10, "Ordered" = 1 WHERE "ID" = 29
 
 </p>
 </details>
+
+#### Conditional updates
+
+The ``IUpdate::SetIf()``-method accepts an array of boolean flags as keys for the values to set, 
+omitting false conditions from the resulting SQL statement.
+
+```PHP
+$StockChanged = true;
+$Reordered = Reorder($ID);
+
+Q::Update("Shop.Products")
+ ->SetIf([
+    "Stock"   => [$StockChanged => 10], 
+    "Ordered" => [$Reordered => true]
+ ])
+ ->Where(["ID" => $ID]);
+```
 
 ### Delete
 
@@ -988,17 +1130,17 @@ ALTER SCHEMA "Shop" RENAME TO "Store"
 Q::Alter()
  ->Table("Shop.Products")
  ->Add(
-     ["SpecialOffer" => ["Type" => Type::Boolean, "Autoincrement" => true]],
-     ["Prices" => ["Unique" => true, "Fields" => ["ID", "Sender", "Recipient"]]]
+    ["SpecialOffer" => ["Type" => Type::Boolean, "Autoincrement" => true]],
+    ["Prices" => ["Unique" => true, "Fields" => ["ID", "Sender", "Recipient"]]]
  )
  ->Modify(
-     ["Description" => ["Type" => Type::TinyText, "Collation" => Collation::ASCII]],
-     ["Prices" => "Price"]
+    ["Description" => ["Type" => Type::TinyText, "Collation" => Collation::ASCII]],
+    ["Prices" => "Price"]
  )
  ->Rename("Items")
  ->Drop(
-     ["SpecialOffer"],
-     ["Prices"]
+    ["SpecialOffer"],
+    ["Prices"]
  );
 ```
 
