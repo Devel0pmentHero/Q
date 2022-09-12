@@ -99,7 +99,7 @@ class Q {
         static::$Separator = static::$Provider::Separator;
         static::$Quote     = static::$Provider::Quote;
         static::$Field     = static::$Provider::Field;
-        static::$Default   = static::$Provider::default;
+        static::$Default   = static::$Provider::Default;
         return static::$Provider;
     }
 
