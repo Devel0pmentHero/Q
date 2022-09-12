@@ -99,7 +99,7 @@ class Q {
         static::$Separator = static::$Provider::Separator;
         static::$Quote     = static::$Provider::Quote;
         static::$Field     = static::$Provider::Field;
-        static::$Default   = static::$Provider::Default;
+        static::$Default   = static::$Provider::default;
         return static::$Provider;
     }
 
@@ -274,6 +274,95 @@ class Q {
      */
     public static function Drop(): IDrop {
         return static::$Provider->Drop();
+    }
+
+    /**
+     * Factory method that creates new "MIN()"-IAggregateFunction according the current target database.
+     *
+     * @param string $Field    The field to get the lowest value of.
+     * @param bool   $Distinct Flag indicating whether to prepend a "DISTINCT"-statement.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Min(string $Field, bool $Distinct = false): IAggregateFunction {
+        return static::$Provider->Min($Field, $Distinct);
+    }
+
+    /**
+     * Factory method that creates new "MAX()"-IAggregateFunction according the current target database.
+     *
+     * @param string $Field    The field to get the highest value of.
+     * @param bool   $Distinct Flag indicating whether to prepend a "DISTINCT"-statement.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Max(string $Field, bool $Distinct = false): IAggregateFunction {
+        return static::$Provider->Max($Field, $Distinct);
+    }
+
+    /**
+     * Factory method that creates new "SUM()"-IAggregateFunction according the current target database.
+     *
+     * @param string $Field    The field to sum the values of.
+     * @param bool   $Distinct Flag indicating whether to prepend a "DISTINCT"-statement.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Sum(string $Field, bool $Distinct = false): IAggregateFunction {
+        return static::$Provider->Sum($Field, $Distinct);
+    }
+
+    /**
+     * Factory method that creates new "COUNT()"-IAggregateFunction according the current target database.
+     *
+     * @param string $Field    The field to count the rows of.
+     * @param bool   $Distinct Flag indicating whether to prepend a "DISTINCT"-statement.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Count(string $Field, bool $Distinct = false): IAggregateFunction {
+        return static::$Provider->Count($Field, $Distinct);
+    }
+
+    /**
+     * Factory method that creates new "NOW()"-IAggregateFunction according the current target database.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Now(): IAggregateFunction {
+        return static::$Provider->Now();
+    }
+
+    /**
+     * Factory method that creates new "AVG()"-IAggregateFunction according the current target database.
+     *
+     * @param string $Field    The field to get the average value of.
+     * @param bool   $Distinct Flag indicating whether to prepend a "DISTINCT"-statement.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Avg(string $Field, bool $Distinct = false): IAggregateFunction {
+        return static::$Provider->Avg($Field, $Distinct);
+    }
+
+    /**
+     * Factory method that creates new "GROUP_CONCAT()/GROUPING()"-IAggregateFunction according the current target database.
+     *
+     * @param mixed ...$Fields The field to group.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function Group(...$Fields): IAggregateFunction {
+        return static::$Provider->Avg(...$Fields);
+    }
+
+    /**
+     * Factory method that creates new "CURRENT_TIMESTAMP()"-IAggregateFunction according the current target database.
+     *
+     * @return \Q\Expression\IAggregateFunction A new instance of the IAggregateFunction-implementation compatible to the current target database.
+     */
+    public static function CurrentTimestamp(): IAggregateFunction {
+        return static::$Provider->CurrentTimestamp();
     }
 
 }
