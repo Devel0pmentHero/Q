@@ -7,12 +7,12 @@ human readable SQL statements.
 
 ```PHP
 <main class="Blog">
-<?php foreach(Q::Select("*")->From("Blog")->Limit(10)->Offset($Page * 10)->OrderBy("Date") as $Post) :>
+<?php foreach(Q::Select("*")->From("Blog")->Limit(10)->Offset($Page * 10)->OrderBy("Date") as $Post): ?>
     <article class="Post">
-        <h2><?= $Post["Title"] ><h2>
-        <p><?= $Post["Content"] ></p>
+        <h2><?= $Post["Title"] ?><h2>
+        <p><?= $Post["Content"] ?></p>
     </article>
-<?php endforeach; >
+<?php endforeach; ?>
 </main>
 ```
 
