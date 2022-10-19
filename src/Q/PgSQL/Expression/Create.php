@@ -27,7 +27,7 @@ class Create extends Table implements ICreate {
                 $Field["Autoincrement"] ?? false,
                 $Field["Default"] ?? "",
                 null,
-                null,
+                $Field["Size"] ?? null,
                 $Field["OnUpdate"] ?? null
             );
         }

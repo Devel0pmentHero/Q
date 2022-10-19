@@ -58,7 +58,7 @@ class Alter extends Table implements IAlter {
                     $Column["Autoincrement"] ?? false,
                     $Column["Default"] ?? "",
                     null,
-                    null,
+                    $Field["Size"] ?? null,
                     $Column["OnUpdate"] ?? null
                 );
         }
@@ -82,7 +82,7 @@ class Alter extends Table implements IAlter {
                         static::Types[Type::BigInt] => "BIGSERIAL"
                     };
                 } else {
-                    $Type = static::Types[$Column["Type"] & ~\Q\Type::Unsigned];
+                    $Type = static::Types[$Column["Type"] & ~Type::Unsigned];
                 }
                 $this->Statements[] = "ALTER COLUMN {$this->Provider->SanitizeField($Name)} TYPE {$Type}";
                 if(isset($Column["Nullable"])) {

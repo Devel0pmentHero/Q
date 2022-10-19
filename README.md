@@ -3,7 +3,7 @@
 Q is a ... no, you may expect now some buzzwords like "small" and "lightweight", 
 but no abstracting away SQL within PHP is not a trivial task, especially when it comes to tables;
 so: Q is a mixup between a "Database access Layer" and a Querybuilder that focuses on
-human readable SQL statements.
+human-readable SQL statements.
 
 ```PHP
 <main class="Blog">
@@ -957,7 +957,7 @@ Q::Create()
     [
         "ID"          => ["Type" => Type::BigInt | Type::Unsigned, "Autoincrement" => true],
         "Name"        => ["Type" => Type::TinyText, "Collation" => Collation::UTF8],
-        "Price"       => ["Type" => Type::Double | Type::Unsigned,],
+        "Price"       => ["Type" => Type::Double | Type::Unsigned, "Null" => true],
         "Category"    => ["Type" => Type::TinyText, "Collation" => Collation::UTF8],
         "Stock"       => ["Type" => Type::Int | Type::Unsigned, "Size" => 2],
         "Description" => ["Type" => Type::Text, "Collation" => Collation::UTF8, "Default" => "No description available"]

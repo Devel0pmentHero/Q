@@ -92,7 +92,10 @@ abstract class Table extends \Q\AnsiSQL\Expression\Table {
                 static::Types[Type::BigInt] => "BIGSERIAL"
             };
         } else {
-            $Field[] = static::Types[$Type & ~Type::Unsigned];
+            $Field[] = match (static::Types[$Type & ~Type::Unsigned]) {
+                static::Types[Type::Char], static::Types[Type::VarChar] => static::Types[$Type] . ($Size !== null ? "({$Size})" : ""),
+                default => static::Types[$Type & ~Type::Unsigned]
+            };
         }
 
         $Field[] = $Nullable ? Provider::NULL : "NOT " . Provider::NULL;
