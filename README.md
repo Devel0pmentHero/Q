@@ -82,7 +82,7 @@ Q::Execute("SELECT ID, Name, Price FROM Shop.Products");
 Every operation performed on the database, will end in the return of a specialized ``\Q\IResult``-instance 
 which implements the ``\Traversable``-interface, thus removing the need of annoying while loops with "fetch_whatever()"-calls.
 
-Directly iterating over a result set will yield the values returned by the ``IResult::ToMap()``-method for each row in the result set.
+Directly iterating over a result set will yield the values returned by the ``ToMap()``-method for each row in the result set.
 ````PHP
 foreach(Q::Execute("SELECT ID, Name, Price FROM Shop.Products") as $Product) {
     print $Product["ID"], $Product["Name"];
@@ -161,7 +161,7 @@ Although stubs exist, transactions are currently under development.
 into injection safe SQL while retaining its syntax as much as possible.
 
 Expressions are early evaluated and have no form of syntactic or logic validation, you have to care on your own to call their methods in the correct order;
-this library will only transfer an object-oriented API into plain SQL strings.
+this library will only transfer PHP code into plain SQL strings.
 
 ```PHP
 $Result = Q::Select("ID", "Name", "Price")
@@ -249,7 +249,7 @@ WHERE "Stock" <= 20
 #### Distinct
 
 
-Distinct selects are performed by passing the fields to select to a following call to the ``ISelect::Distinct()``-method.
+Distinct selects are performed by passing the fields to select to a following call to the ``Distinct()``-method.
 
 ```PHP
 Q::Select()->Distinct("Name", "Category")
@@ -304,7 +304,7 @@ WHERE "Stock" <= 20
 #### Aggregate functions
 
 Aggregate functions can be applied through the 
-``Q::Avg()``, ``Q:Min()``, ``Q:Max()``, ``Q:Sum()``, ``Q:Count()``, ``Q:Now()``, ``Q:Group()`` and ``Q:CurrentTimestamp()``-methods.
+``Q::Avg()``, ``Q::Min()``, ``Q::Max()``, ``Q::Sum()``, ``Q::Count()``, ``Q::Now()``, ``Q::Group()`` and ``Q::CurrentTimestamp()``-methods.
 
 ```PHP
 Q::Select(Q::Avg("Price"), [Q::Count("Stock"), "Amount"])
@@ -348,7 +348,7 @@ WHERE "Stock" <= 20
 
 #### Filtering records
 
-To filter records, the ``\Q\Expression\ISelect``-, ``IUpdate`` and ``IDelete``-Expressions provide the ``IExpression::Where()``-method which accepts a map of filtering conditions.
+To filter records, the ``\Q\Expression\ISelect``-, ``IUpdate`` and ``IDelete``-Expressions provide the ``Where()``-method which accepts a map of filtering conditions.
 The values of a set of filtering conditions will be chained with "AND"-statements, while every set of filtering conditions will be chained together with "OR"-statements.
 ```PHP
 Q::Select("*")
@@ -438,7 +438,7 @@ WHERE (
 </details>
 
 #### Ordering records
-To order records, the ``\Q\Expression\ISelect``-Expressions provides the ``IExpression::OrderBy()``-method which accepts a map of ordering conditions.
+To order records, the ``\Q\Expression\ISelect``-Expressions provides the ``OrderBy()``-method which accepts a map of ordering conditions.
 The key of the map represents the column while the value must be a boolean flag whether to sort in ascending(true) or descending(false) order
 ```PHP
 Q::Select("*")
@@ -477,7 +477,7 @@ SELECT * FROM "Shop"."Products" ORDER BY "Price" ASC, "Stock" DESC
 </details>
 
 #### Limiting records
-To limit records, the ``\Q\Expression\ISelect``-Expressions provides the ``IExpression::Limit()`` and ``IExpression::Offset()``-methods.
+To limit records, the ``\Q\Expression\ISelect``-Expressions provides the ``Limit()`` and ``Offset()``-methods.
 ```PHP
 Q::Select("*")
  ->From("Shop.Products")
@@ -515,8 +515,8 @@ SELECT * FROM "Shop"."Products" LIMIT 10 OFFSET 20
 #### Joins
 
 To join the records of a different table into the result set, the ``\Q\Expression\ISelect``-Expression provides the
-``ISelect::InnerJoin()``, ``ISelect::LeftJoin()``, ``ISelect::RightJoin()`` and ``ISelect::FullJoin()``-methods which accept the name of the table to join.
-Comparison rules can be applied through the ``ISelect::On()``-method by following the same rules of filtering result sets.
+``InnerJoin()``, ``LeftJoin()``, ``RightJoin()`` and ``FullJoin()``-methods which accept the name of the table to join.
+Comparison rules can be applied through the ``On()``-method by following the same rules of filtering result sets.
 
 ```PHP
 Q::Select("Products.Name", "Products.Price", "Orders.Amount", "Orders.Date")
@@ -564,7 +564,7 @@ WHERE "Orders"."Paid" = 1
 </details>
 
 #### Sub selects
-Sub selects can be used in the ``ISelect::From()`` and ``ISelect::Exists()``-methods via passing another select Expression.
+Sub selects can be used in the ``From()`` and ``Exists()``-methods via passing another select Expression.
 
 Sub selects in the "FROM"-clause require an alias as a second argument in the field list of the top select.
 ```PHP
@@ -617,7 +617,7 @@ FROM (
 </details>
 
 
-The "EXISTS"-clause is currently implemented in a separate method and requires a preceding call to the ``ISelect::Where()``-method
+The "EXISTS"-clause is currently implemented in a separate method and requires a preceding call to the ``Where()``-method
 without passing any parameters to it. (This maybe changed to a filtering condition in the future)
 
 ```PHP
@@ -630,7 +630,7 @@ Q::Select("Customer")
       ->Where(["Orders.ProductID" => "Products.ID"])
  );
 ```
-Note: The ``ISelect::Where()``-method is only aware of the names and aliases of its own instance, 
+Note: The ``Where()``-method is only aware of the names and aliases of its own instance, 
 this means a sub select doesn't know when to treat the value of a filtering condition as a reference to a foreign table field.
 References to foreign columns have to be always defined as the key of filtering conditions, otherwise they'll be just treated as simple strings.
 
@@ -679,7 +679,7 @@ WHERE EXISTS (
 
 #### Union selects
 
-To combine result sets, the ``ISelect::Union()`` accepts an additional select Expression to use; 
+To combine result sets, the ``Union()``-method accepts an additional select Expression to use; 
 followed by an optional boolean flag determining whether to use an "UNION ALL" statement instead.
 
 ```PHP
@@ -825,7 +825,7 @@ UPDATE "Shop"."Products"  SET "Stock" = 10, "Ordered" = 1 WHERE "ID" = 29
 
 #### Conditional updates
 
-The ``IUpdate::SetIf()``-method accepts an array of boolean flags as keys for the values to set, 
+The ``SetIf()``-method accepts an array of boolean flags as keys for the values to set, 
 omitting false conditions from the resulting SQL statement.
 
 ```PHP
@@ -892,7 +892,7 @@ Q::Create()
 ```
 
 Note: This method won't have any effect while using the MySQL-Provider to stay compatible to schema based databases.
-Databases can be created through the ``ICreate::Schema()``-method, this applies to the ``IAlter::Database()`` and ``IDrop::Database()``-methods too. 
+Databases can be created through the ``Schema()``-method, this applies to the ``IAlter::Database()`` and ``IDrop::Database()``-methods too. 
 
 <details><summary>MsSQL</summary>
 <p>
